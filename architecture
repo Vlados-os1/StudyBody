@@ -1,0 +1,36 @@
+├── app/
+│   ├── init.py
+│   ├── main.py                 # Точка входа приложения
+│   ├── core/
+│   │   ├── init.py
+│   │   ├── config.py           # Конфигурация приложения
+│   │   ├── security.py         # JWT и хеширование паролей
+│   │   └── database.py         # Подключение к БД
+│   ├── models/
+│   │   ├── init.py
+│   │   └── user.py             # SQLAlchemy модели         
+│   ├── schemas/
+│   │   ├── init.py
+│   │   ├── user.py             # Pydantic схемы
+│   │   └── auth.py
+│   ├── api/
+│   │   ├│   ├── deps.py        # Зависимости
+│   │   └── v1/
+│   │       ├── init.py
+│   │       ├── auth.py         # Аутентификация
+│   │       └── users.py        # Управление пользователями
+│   ├── services/
+│   │   ├── init.py
+│   │   ├── user_service.py     # Бизнес-логика
+│   │   └── telegram_service.py # Валидация Telegram данных
+│   └── telegram/
+│       ├── init.py
+│       ├── bot.py             # Telegram бот
+│       └── handlers.py        # Обработчики бота
+├── alembic/                   # Миграции БД
+├── static/                    # Статические файлы для mini-app
+├── templates/                 # HTML шаблоны
+├── requirements.txt
+├── .env
+├── Dockerfile
+└── docker-compose.yml
