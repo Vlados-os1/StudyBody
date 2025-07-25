@@ -1,0 +1,17 @@
+fastapi[standard]
+uvicorn[standard]
+pydantic-settings==2.10.1
+environs==14.2.0
+
+PyJWT==2.10.1
+
+sqlalchemy==2.0.41
+alembic==1.16.4
+asyncpg==0.30.0
+asyncio==3.4.3
+
+aiofiles==24.1.0
+aiogram==3.21.0
+magic-filter==1.0.12
+
+uuid==1.30
