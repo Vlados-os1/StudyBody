@@ -12,13 +12,13 @@ async def get_user(tg_id: int):
         user = result.scalar_one_or_none()
         return user
 
-async def add_user(tg_id: int, characteristics: UserCharacteristics):
+async def add_user(tg_id: int):
     user = await get_user(tg_id)
     if user:
         return user
 
     async with async_session() as session:
-        new_user = UserOrm(telegram_id=tg_id, department=characteristics.department, interests=characteristics.interests)
+        new_user = UserOrm(telegram_id=tg_id)
         session.add(new_user)
         await session.commit()
         await session.refresh(new_user)

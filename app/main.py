@@ -11,7 +11,7 @@ async def lifespan(app_: FastAPI):
     await init_db()
     yield
 
-app = FastAPI(title="StudyBody", lifespan=lifespan)
+app = FastAPI(title="StudyBody")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,3 +22,4 @@ app.add_middleware(
 )
 
 app.include_router(router_user)
+

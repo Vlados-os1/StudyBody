@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     @property
     def DATA_URL_asyncpg(self):
         # DSN
-        # postgresql+asyncpg://postgres:spring20@localhost:5432/study
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     model_config = SettingsConfigDict(env_file=".env")
