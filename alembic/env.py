@@ -16,10 +16,10 @@ load_dotenv()  # загрузить переменные из .env файла
 config = context.config
 
 # Формируем строку подключения из env-переменных
-db_user = os.getenv("DB_USER")
-db_pass = os.getenv("DB_PASS")
-db_host = os.getenv("DB_HOST")
-db_name = os.getenv("DB_NAME")
+db_user = os.getenv("POSTGRES_USER")
+db_pass = os.getenv("POSTGRES_PASSWORD")
+db_host = os.getenv("POSTGRES_HOST")
+db_name = os.getenv("POSTGRES_DB")
 
 sqlalchemy_url = f"postgresql://{db_user}:{db_pass}@{db_host}/{db_name}"
 

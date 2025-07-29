@@ -2,11 +2,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    DB_HOST: str
-    DB_PORT: int
-    DB_USER: str
-    DB_PASS: str
-    DB_NAME: str
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
 
     JWT_KEY: str
     ALGORITHM: str
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     @property
     def DATA_URL_asyncpg(self):
         # DSN
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     model_config = SettingsConfigDict(env_file=".env")
 
