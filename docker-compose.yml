@@ -16,7 +16,7 @@ services:
       db:
         condition: service_healthy
     restart: always
-    expose:                # expose вместо публичного "ports"
+    expose:
       - "8000"
     networks:
       - app-network
