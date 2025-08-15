@@ -12,7 +12,7 @@ import app.models.token as models_token
 from app.dependencies import get_db
 from app.core.database import async_session
 from app.core.security import get_password_hash, verify_password
-from app.services.mail_service import user_mail_event
+from app.tasks.mail_tasks import user_mail_event
 from app.exceptions.httpex import (
     BadRequestException,
     ForbiddenException,
@@ -40,7 +40,6 @@ router_auth = APIRouter()
 @router_auth.post("/api/register", response_model=schemas_user.User)
 async def register(
     data: schemas_user.UserRegister,
-    bg_task: BackgroundTasks, # (for email)
     db: async_session = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
@@ -63,7 +62,8 @@ async def register(
     mail_task_data = schemas_mail.MailTaskSchema(
         user=user_schema, body=schemas_mail.MailBodySchema(type="verify", token=verify_token)
     )
-    bg_task.add_task(user_mail_event, mail_task_data)
+
+    user_mail_event.delay(mail_task_data)
 
     return user_schema
 
@@ -181,7 +181,7 @@ async def password_update(
         try:
             schemas_user.OldPasswordErrorSchema(old_password=False)
         except ValidationError as e:
-            raise RequestValidationError(e.raw_errors)
+            raise RequestValidationError(e.errors())
     user.password = get_password_hash(data.password)
     await user.save(db=db)
 

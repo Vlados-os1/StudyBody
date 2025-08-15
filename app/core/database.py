@@ -4,7 +4,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import select
 from fastapi import HTTPException, status
 
-from app.core.config import settings
+from app.core.configs.config import settings
 
 
 async_engine = create_async_engine(

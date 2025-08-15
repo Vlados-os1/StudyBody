@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt, JWTError
 import uuid
 
-from app.core.config import settings
+from app.core.configs.config import settings
 from app.schemas.jwt import JwtTokenSchema, TokenPair
 from app.schemas.user import User
 from app.models.token import BlackListToken

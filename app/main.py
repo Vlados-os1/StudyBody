@@ -11,7 +11,7 @@ from app.api.auth import router_auth
 async def lifespan(app_: FastAPI):
     await init_db()
     yield
-    await drop_db()
+    # await drop_db()
 
 app = FastAPI(title="StudyBody", lifespan=lifespan)
 

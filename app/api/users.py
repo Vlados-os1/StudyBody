@@ -56,4 +56,6 @@ async def update_profile(
     user.department = user_data.get("department") or user.department
     user.interests = user_data.get("interests") or user.interests
 
+    await user.save(db=db)
+
     return {"email": user.email, "full_name": user.full_name, "department": user.department, "interests": user.interests}

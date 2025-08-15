@@ -1,7 +1,8 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
 from app.schemas.mail import MailTaskSchema
-from app.core.config import settings
+from app.core.configs.config import settings
+from app.core.configs.celery_config import celery_app
 
 
 conf = ConnectionConfig(
@@ -15,8 +16,10 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=settings.USE_CREDENTIALS,
 )
 
-async def user_mail_event(mail_task_data: MailTaskSchema):
-    verify_link = f"http://127.0.0.1:8000/api/verify?token={mail_task_data.body.token}"
+
+@celery_app.task
+def user_mail_event(mail_task_data: MailTaskSchema):
+    verify_link = f"http://{settings.IP}:{settings.PORT}/api/verify?token={mail_task_data.body.token}"
     subject = "Подтвердите ваш email"
     body_text = f"Для подтверждения перейдите по ссылке: {verify_link}"
     recipients = [mail_task_data.user.email]
@@ -29,4 +32,5 @@ async def user_mail_event(mail_task_data: MailTaskSchema):
     )
 
     fm = FastMail(conf)
-    await fm.send_message(message)
+
+    fm.send_message(message)
