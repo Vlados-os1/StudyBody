@@ -63,7 +63,7 @@ async def register(
         user=user_schema, body=schemas_mail.MailBodySchema(type="verify", token=verify_token)
     )
 
-    user_mail_event.delay(**mail_task_data.model_dump())
+    user_mail_event.delay(mail_task_data.body.token, [mail_task_data.user.email])
 
     return user_schema
 

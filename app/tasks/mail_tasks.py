@@ -1,4 +1,5 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+from pydantic import EmailStr
 
 from app.schemas.mail import MailTaskSchema
 from app.core.configs.config import settings
@@ -18,11 +19,10 @@ conf = ConnectionConfig(
 
 
 @celery_app.task
-def user_mail_event(mail_task_data: MailTaskSchema):
-    verify_link = f"http://{settings.IP}:8000/api/verify?token={mail_task_data.body.token}"
+def user_mail_event(recipients: list[EmailStr], token: str):
+    verify_link = f"http://{settings.IP}:8000/api/verify?token={token}"
     subject = "Подтвердите ваш email"
     body_text = f"Для подтверждения перейдите по ссылке: {verify_link}"
-    recipients = [mail_task_data.user.email]
 
     message = MessageSchema(
         subject=subject,
