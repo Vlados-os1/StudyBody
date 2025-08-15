@@ -27,8 +27,8 @@ services:
       db:
         condition: service_healthy
     restart: always
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     networks:
       - app-network
 
