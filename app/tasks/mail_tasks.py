@@ -19,7 +19,7 @@ conf = ConnectionConfig(
 
 @celery_app.task
 def user_mail_event(mail_task_data: MailTaskSchema):
-    verify_link = f"http://127.0.0.1:8000/api/verify?token={mail_task_data.body.token}"
+    verify_link = f"http://{settings.IP}:8000/api/verify?token={mail_task_data.body.token}"
     subject = "Подтвердите ваш email"
     body_text = f"Для подтверждения перейдите по ссылке: {verify_link}"
     recipients = [mail_task_data.user.email]
