@@ -11,6 +11,16 @@ class Settings(BaseSettings):
     JWT_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRES_MINUTES: int
+
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_PORT: int
+    MAIL_SERVER: str
+    MAIL_SSL_TLS: bool
+    MAIL_STARTTLS: bool
+    USE_CREDENTIALS: bool
 
     @property
     def DATA_URL_asyncpg(self):
