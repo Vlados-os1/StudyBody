@@ -1,5 +1,6 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from pydantic import EmailStr
+import asyncio
 
 from app.schemas.mail import MailTaskSchema
 from app.core.configs.config import settings
@@ -34,7 +35,7 @@ def user_mail_event(token: str, recipients: list[EmailStr]):
 
         fm = FastMail(conf)
 
-        fm.send_message(message)
+        asyncio.run(fm.send_message(message))
 
         return {"mes": "ok"}
     except Exception:

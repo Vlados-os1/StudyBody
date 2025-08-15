@@ -91,16 +91,6 @@ services:
     networks:
       - app-network
 
-  flower:
-    image: mher/flower:latest
-    command: flower --broker=redis://redis:6379/0
-    ports:
-      - "5555:5555"
-    depends_on:
-      - redis
-    networks:
-      - app-network
-
   nginx:
     image: nginx:latest
     ports:
