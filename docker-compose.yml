@@ -10,6 +10,15 @@ services:
       - JWT_KEY=${JWT_KEY}
       - ALGORITHM=${ALGORITHM}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - REFRESH_TOKEN_EXPIRES_MINUTES=${REFRESH_TOKEN_EXPIRES_MINUTES}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_SSL_TLS=${MAIL_SSL_TLS}
+      - MAIL_STARTTLS=${MAIL_STARTTLS}
+      - USE_CREDENTIALS=${USE_CREDENTIALS}
     depends_on:
       db:
         condition: service_healthy
@@ -35,6 +44,28 @@ services:
     restart: always
     expose:
       - "5432"
+    networks:
+      - app-network
+
+  redis:
+      image: redis:7-alpine
+      ports:
+        - "6379:6379"
+      restart: always
+      networks:
+        - app-network
+
+  celery:
+    build: .
+    command: celery -A celery_config.celery_app worker --loglevel=info
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB=${REDIS_DB}
+    depends_on:
+      - app
+      - redis
+    restart: always
     networks:
       - app-network
 
