@@ -20,17 +20,21 @@ conf = ConnectionConfig(
 
 @celery_app.task
 def user_mail_event(token: str, recipients: list[EmailStr]):
-    verify_link = f"http://{settings.IP}:8000/api/verify?token={token}"
-    subject = "Подтвердите ваш email"
-    body_text = f"Для подтверждения перейдите по ссылке: {verify_link}"
+    try:
+        verify_link = f"http://{settings.IP}:8000/api/verify?token={token}"
+        subject = "Подтвердите ваш email"
+        body_text = f"Для подтверждения перейдите по ссылке: {verify_link}"
 
-    message = MessageSchema(
-        subject=subject,
-        recipients=recipients,
-        body=body_text,
-        subtype="plain"
-    )
+        message = MessageSchema(
+            subject=subject,
+            recipients=recipients,
+            body=body_text,
+            subtype="plain"
+        )
 
-    fm = FastMail(conf)
+        fm = FastMail(conf)
 
-    fm.send_message(message)
+        result = fm.send_message(message)
+        print("MAIL_SEND_RESULT:", result)
+    except Exception as e:
+        print("MAIL_SEND_ERROR:", repr(e))
