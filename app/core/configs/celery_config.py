@@ -9,7 +9,7 @@ celery_app = Celery(
 )
 
 
-celery_app.autodiscover_tasks(['tasks'])
+celery_app.autodiscover_tasks(['app.tasks.mail_tasks'])
 
 
 celery_app.conf.update(
