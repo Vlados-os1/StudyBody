@@ -12,7 +12,7 @@ import app.models.token as models_token
 from app.dependencies import get_db
 from app.core.database import async_session
 from app.core.security import get_password_hash, verify_password
-from app.tasks.mail_tasks import user_mail_event
+from app.celery.tasks.mail_tasks import user_mail_event
 from app.exceptions.httpex import (
     BadRequestException,
     ForbiddenException,

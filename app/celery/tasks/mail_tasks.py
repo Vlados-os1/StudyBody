@@ -2,9 +2,8 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from pydantic import EmailStr
 import asyncio
 
-from app.schemas.mail import MailTaskSchema
 from app.core.configs.config import settings
-from app.core.configs.celery_config import celery_app
+from app.celery.celery_config import celery_app
 
 
 conf = ConnectionConfig(
