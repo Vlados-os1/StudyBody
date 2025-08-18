@@ -8,6 +8,7 @@ from app.core.configs.config import settings
 from app.schemas.jwt import JwtTokenSchema, TokenPair
 from app.schemas.user import User
 from app.models.token import BlackListToken
+from app.models.user import UserOrm
 from app.exceptions.httpex import AuthFailedException
 
 
@@ -100,7 +101,11 @@ async def refresh_token_state(
     db.add(BlackListToken(id=jti, expire=expire))
     await db.commit()
 
-    token_pair = create_token_pair(user_id)
+    user = await UserOrm.find_by_id(db=db, id=user_id)
+    if user is None:
+        raise AuthFailedException()
+    user = User.model_validate(user, from_attributes=True)
+    token_pair = create_token_pair(user=user)
 
     return token_pair
 

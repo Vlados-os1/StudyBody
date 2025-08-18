@@ -67,6 +67,28 @@ async def register(
     return user_schema
 
 
+@router_auth.post("/api/resend-verification", response_model=schemas_user.SuccessResponseScheme)
+async def resend_verification(
+        data: schemas_user.ForgotPasswordSchema,
+        db: AsyncSession = Depends(get_db)
+):
+    user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
+    if not user:
+        return {"msg": "If you have an account, check your email."}
+    if user.is_active:
+        return {"msg": "Account already activated."}
+
+    user_schema = schemas_user.User.model_validate(user, from_attributes=True)
+    verify_token = mail_token(user_schema)
+
+    user_mail_event.delay(
+        token=verify_token,
+        recipients=[str(user_schema.email)]
+    )
+
+    return {"msg": "Verification email sent, check your inbox."}
+
+
 @router_auth.post("/api/login")
 async def login(
     data: schemas_user.UserLogin,

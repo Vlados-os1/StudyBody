@@ -58,9 +58,4 @@ async def update_profile(
 
     await user.save(db=db)
 
-    return {
-        "email": user.email,
-        "full_name": user.full_name,
-        "department": user.department,
-        "interests": user.interests,
-    }
+    return {"msg": "Successfully updated"}

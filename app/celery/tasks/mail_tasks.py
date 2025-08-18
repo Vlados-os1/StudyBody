@@ -37,8 +37,10 @@ def user_mail_event(token: str, recipients: list[EmailStr]):
         )
 
         fm = FastMail(conf)
-        loop = asyncio.get_event_loop()
-        loop.create_task(_send_mail_async(message, fm))
+        # loop = asyncio.get_event_loop()
+        # loop.create_task(_send_mail_async(message, fm))
+
+        asyncio.run(fm.send_message(message))
 
         return {"mes": "ok"}
     except Exception:
