@@ -3,8 +3,6 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from alembic import context
-
 from app.core.database import Base
 """No delete!"""
 from app.models.user import UserOrm
@@ -32,7 +30,7 @@ config.set_main_option("sqlalchemy.url", sqlalchemy_url)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-config = context.config
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
