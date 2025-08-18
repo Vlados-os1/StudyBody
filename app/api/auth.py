@@ -1,16 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response, Cookie
+from fastapi import APIRouter, HTTPException, Depends, Response, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from datetime import datetime, timezone
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.schemas.user as schemas_user
 import app.schemas.mail as schemas_mail
 import app.models.user as models_user
 import app.models.token as models_token
 from app.dependencies import get_db
-from app.core.database import async_session
 from app.core.security import get_password_hash, verify_password
 from app.celery.tasks.mail_tasks import user_mail_event
 from app.exceptions.httpex import (
@@ -40,7 +40,7 @@ router_auth = APIRouter()
 @router_auth.post("/api/register", response_model=schemas_user.User)
 async def register(
     data: schemas_user.UserRegister,
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if user:
@@ -59,11 +59,10 @@ async def register(
     user_schema = schemas_user.User.model_validate(user, from_attributes=True)
     verify_token = mail_token(user_schema)
 
-    mail_task_data = schemas_mail.MailTaskSchema(
-        user=user_schema, body=schemas_mail.MailBodySchema(type="verify", token=verify_token)
+    user_mail_event.delay(
+        token=verify_token,
+        recipients=[str(user_schema.email)]
     )
-
-    user_mail_event.delay(mail_task_data.body.token, [mail_task_data.user.email])
 
     return user_schema
 
@@ -72,7 +71,7 @@ async def register(
 async def login(
     data: schemas_user.UserLogin,
     response: Response,
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.authenticate(
         db=db, email=data.email, password=data.password
@@ -94,15 +93,26 @@ async def login(
 
 
 @router_auth.post("/api/refresh")
-async def refresh(refresh: Annotated[str | None, Cookie()] = None):
-    print(refresh)
+async def refresh(
+        response: Response,
+        refresh: Annotated[str | None, Cookie()] = None,
+        db: AsyncSession = Depends(get_db)
+):
     if not refresh:
         raise BadRequestException(detail="refresh token required")
-    return refresh_token_state(token=refresh)
+
+    token_pair = await refresh_token_state(refresh, db)
+
+    add_refresh_token_cookie(response=response, token=token_pair.refresh.token)
+
+    return {"token": token_pair.access.token}
 
 
 @router_auth.get("/api/verify", response_model=schemas_user.SuccessResponseScheme)
-async def verify(token: str, db: async_session = Depends(get_db)):
+async def verify(
+        token: str,
+        db: AsyncSession = Depends(get_db)
+):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
     if not user:
@@ -116,12 +126,15 @@ async def verify(token: str, db: async_session = Depends(get_db)):
 @router_auth.post("/api/logout", response_model=schemas_user.SuccessResponseScheme)
 async def logout(
     token: Annotated[str, Depends(oauth2_scheme)],
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
+    jti = payload[JTI]
+    expire = datetime.fromtimestamp(payload[EXP], tz=timezone.utc)
+
     black_listed = models_token.BlackListToken(
-        id=payload[JTI],
-        expire=datetime.fromtimestamp(payload[EXP], tz=timezone.utc)
+        id=jti,
+        expire=expire
     )
     await black_listed.save(db=db)
 
@@ -131,28 +144,26 @@ async def logout(
 @router_auth.post("/api/forgot-password", response_model=schemas_user.SuccessResponseScheme)
 async def forgot_password(
     data: schemas_user.ForgotPasswordSchema,
-    bg_task: BackgroundTasks,
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if user:
         user_schema = schemas_user.User.model_validate(user, from_attributes=True)
         reset_token = mail_token(user_schema)
 
-        mail_task_data = schemas_mail.MailTaskSchema(
-            user=user_schema,
-            body=schemas_mail.MailBodySchema(type="password-reset", token=reset_token),
+        user_mail_event.delay(
+            token=reset_token,
+            recipients=[str(user_schema.email)]
         )
-        bg_task.add_task(user_mail_event, mail_task_data)
 
-    return {"msg": "Reset token sended successfully your email check your email"}
+    return {"msg": "Reset token sent successfully, check your email"}
 
 
 @router_auth.post("/password-reset", response_model=schemas_user.SuccessResponseScheme)
 async def password_reset_token(
     token: str,
     data: schemas_user.PasswordResetSchema,
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
@@ -169,7 +180,7 @@ async def password_reset_token(
 async def password_update(
     token: Annotated[str, Depends(oauth2_scheme)],
     data: schemas_user.PasswordUpdateSchema,
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])

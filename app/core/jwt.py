@@ -68,8 +68,9 @@ def create_token_pair(user: User) -> TokenPair:
 async def decode_access_token(token: str, db: AsyncSession):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        black_list_token = await BlackListToken.find_by_id(db=db, id=payload[JTI])
-        if black_list_token:
+        jti = payload[JTI]
+        black_list_token = await BlackListToken.find_by_id(db=db, id=jti)
+        if black_list_token and black_list_token.expire > datetime.now(timezone.utc):
             raise JWTError("Token is blacklisted")
     except JWTError:
         raise AuthFailedException()
@@ -77,14 +78,31 @@ async def decode_access_token(token: str, db: AsyncSession):
     return payload
 
 
-def refresh_token_state(token: str):
+async def refresh_token_state(
+        token: str,
+        db: AsyncSession,
+
+):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        jti = payload["jti"]
+        user_id = payload["sub"]
+        exp = payload["exp"]
     except JWTError as ex:
         print(str(ex))
         raise AuthFailedException()
 
-    return {"token": _create_access_token(payload=payload).token}
+    blacklisted = await BlackListToken.find_by_id(db, jti)
+    if blacklisted:
+        raise AuthFailedException()
+
+    expire = datetime.fromtimestamp(exp, timezone.utc)
+    db.add(BlackListToken(id=jti, expire=expire))
+    await db.commit()
+
+    token_pair = create_token_pair(user_id)
+
+    return token_pair
 
 
 def mail_token(user: User):
@@ -102,4 +120,6 @@ def add_refresh_token_cookie(response: Response, token: str):
         value=token,
         expires=int(exp.timestamp()),
         httponly=True,
+        secure=True,
+        samesite='strict'
     )

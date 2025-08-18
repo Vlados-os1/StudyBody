@@ -1,5 +1,7 @@
 from celery import Celery
+
 from app.core.configs.config import settings
+from app.celery.celery_beat_schedule import CELERY_BEAT_SCHEDULE
 
 
 celery_app = Celery(
@@ -9,7 +11,7 @@ celery_app = Celery(
 )
 
 
-celery_app.autodiscover_tasks(['app.celery.tasks.mail_tasks'])
+celery_app.autodiscover_tasks(['app.celery.tasks.mail_tasks', 'app.celery.tasks.cleanup_tasks'])
 
 
 celery_app.conf.update(
@@ -20,3 +22,5 @@ celery_app.conf.update(
     enable_utc=True,
     result_expires=3600,
 )
+
+celery_app.conf.beat_schedule = CELERY_BEAT_SCHEDULE

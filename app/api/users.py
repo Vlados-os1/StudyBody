@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
@@ -17,7 +18,6 @@ from app.exceptions.httpex import (
 )
 from app.core.jwt import (
     create_token_pair,
-    refresh_token_state,
     decode_access_token,
     mail_token,
     add_refresh_token_cookie,
@@ -32,7 +32,7 @@ router_user = APIRouter()
 @router_user.get("/api/main")
 async def profile(
     token: Annotated[str, Depends(oauth2_scheme)],
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
@@ -41,21 +41,26 @@ async def profile(
 
     return {"email": user.email, "full_name": user.full_name, "department": user.department, "interests": user.interests}
 
-@router_user.post("/api/main/update")
+@router_user.patch("/api/main/update")
 async def update_profile(
     token: Annotated[str, Depends(oauth2_scheme)],
     data: schemas_user.UserStudentFacts,
-    db: async_session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
     if not user:
         raise NotFoundException(detail="User not found")
 
-    user_data = data.model_dump()
-    user.department = user_data.get("department") or user.department
-    user.interests = user_data.get("interests") or user.interests
+    user_data = data.model_dump(exclude_unset=True)
+    for field, value in user_data.items():
+        setattr(user, field, value)
 
     await user.save(db=db)
 
-    return {"email": user.email, "full_name": user.full_name, "department": user.department, "interests": user.interests}
+    return {
+        "email": user.email,
+        "full_name": user.full_name,
+        "department": user.department,
+        "interests": user.interests,
+    }

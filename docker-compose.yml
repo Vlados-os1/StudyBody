@@ -1,28 +1,30 @@
+x-common-environment: &default-env
+  - POSTGRES_HOST=${POSTGRES_HOST}
+  - POSTGRES_PORT=${POSTGRES_PORT}
+  - POSTGRES_USER=${POSTGRES_USER}
+  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  - POSTGRES_DB=${POSTGRES_DB}
+  - IP=${IP}
+  - JWT_KEY=${JWT_KEY}
+  - ALGORITHM=${ALGORITHM}
+  - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+  - REFRESH_TOKEN_EXPIRES_MINUTES=${REFRESH_TOKEN_EXPIRES_MINUTES}
+  - REDIS_HOST=${REDIS_HOST}
+  - REDIS_PORT=${REDIS_PORT}
+  - REDIS_DB=${REDIS_DB}
+  - MAIL_USERNAME=${MAIL_USERNAME}
+  - MAIL_PASSWORD=${MAIL_PASSWORD}
+  - MAIL_FROM=${MAIL_FROM}
+  - MAIL_PORT=${MAIL_PORT}
+  - MAIL_SERVER=${MAIL_SERVER}
+  - MAIL_SSL_TLS=${MAIL_SSL_TLS}
+  - MAIL_STARTTLS=${MAIL_STARTTLS}
+  - USE_CREDENTIALS=${USE_CREDENTIALS}
+
 services:
   app:
     build: .
-    environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - IP=${IP}
-      - JWT_KEY=${JWT_KEY}
-      - ALGORITHM=${ALGORITHM}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
-      - REFRESH_TOKEN_EXPIRES_MINUTES=${REFRESH_TOKEN_EXPIRES_MINUTES}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_DB=${REDIS_DB}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM=${MAIL_FROM}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_SSL_TLS=${MAIL_SSL_TLS}
-      - MAIL_STARTTLS=${MAIL_STARTTLS}
-      - USE_CREDENTIALS=${USE_CREDENTIALS}
+    environment: *default-env
     depends_on:
       db:
         condition: service_healthy
@@ -62,28 +64,7 @@ services:
   celery:
     build: .
     command: celery -A app.celery.celery_config.celery_app worker --loglevel=info
-    environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - IP=${IP}
-      - JWT_KEY=${JWT_KEY}
-      - ALGORITHM=${ALGORITHM}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
-      - REFRESH_TOKEN_EXPIRES_MINUTES=${REFRESH_TOKEN_EXPIRES_MINUTES}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_DB=${REDIS_DB}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM=${MAIL_FROM}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_SERVER=${MAIL_SERVER}
-      - MAIL_SSL_TLS=${MAIL_SSL_TLS}
-      - MAIL_STARTTLS=${MAIL_STARTTLS}
-      - USE_CREDENTIALS=${USE_CREDENTIALS}
+    environment: *default-env
     depends_on:
       - app
       - redis
@@ -102,6 +83,17 @@ services:
       - /var/www/certbot:/var/www/certbot
     depends_on:
       - app
+    networks:
+      - app-network
+
+  celery_beat:
+    build: .
+    command: celery -A app.celery.celery_config.celery_app beat --loglevel=info
+    environment: *default-env
+    depends_on:
+      - db
+      - redis
+    restart: always
     networks:
       - app-network
 

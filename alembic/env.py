@@ -6,6 +6,9 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.core.database import Base
+"""No delete!"""
+from app.models.user import UserOrm
+from app.models.token import BlackListToken
 
 import os
 from dotenv import load_dotenv

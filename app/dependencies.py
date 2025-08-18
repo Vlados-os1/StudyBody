@@ -1,9 +1,9 @@
 from app.core.database import async_session
 
-
 async def get_db():
-    db = async_session()
-    try:
-        yield db
-    finally:
-        await db.close()
+    async with async_session() as db:
+        try:
+            yield db
+        except:
+            await db.rollback()
+            raise

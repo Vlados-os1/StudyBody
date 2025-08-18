@@ -18,6 +18,10 @@ conf = ConnectionConfig(
 )
 
 
+async def _send_mail_async(message, fm):
+    await fm.send_message(message)
+
+
 @celery_app.task
 def user_mail_event(token: str, recipients: list[EmailStr]):
     try:
@@ -33,8 +37,8 @@ def user_mail_event(token: str, recipients: list[EmailStr]):
         )
 
         fm = FastMail(conf)
-
-        asyncio.run(fm.send_message(message))
+        loop = asyncio.get_event_loop()
+        loop.create_task(_send_mail_async(message, fm))
 
         return {"mes": "ok"}
     except Exception:
