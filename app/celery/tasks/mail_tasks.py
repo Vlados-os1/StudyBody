@@ -25,7 +25,7 @@ async def _send_mail_async(message, fm):
 @celery_app.task
 def user_mail_event(token: str, recipients: list[EmailStr]):
     try:
-        verify_link = f"https://{settings.DOMEN}:8080/api/verify?token={token}"
+        verify_link = f"https://{settings.DOMAIN}:8080/api/verify?token={token}"
         subject = "Подтвердите ваш email"
         body_text = f"Для подтверждения перейдите по ссылке: {verify_link}"
 

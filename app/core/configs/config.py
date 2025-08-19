@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
 
-    IP: str
+    DOMAIN: str
 
     JWT_KEY: str
     ALGORITHM: str
