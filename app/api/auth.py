@@ -7,13 +7,12 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.schemas.user as schemas_user
-import app.schemas.mail as schemas_mail
 import app.models.user as models_user
 import app.models.token as models_token
 from app.dependencies import get_db
 from app.core.security import get_password_hash, verify_password
 from app.celery.tasks.mail_tasks import user_mail_event
-from app.exceptions.httpex import (
+from app.exceptions.exceptions import (
     BadRequestException,
     ForbiddenException,
     NotFoundException,

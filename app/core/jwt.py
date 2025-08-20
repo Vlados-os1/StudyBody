@@ -9,7 +9,7 @@ from app.schemas.jwt import JwtTokenSchema, TokenPair
 from app.schemas.user import User
 from app.models.token import BlackListToken
 from app.models.user import UserOrm
-from app.exceptions.httpex import AuthFailedException
+from app.exceptions.exceptions import AuthFailedException
 
 
 REFRESH_COOKIE_NAME = "refresh"

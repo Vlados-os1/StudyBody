@@ -18,5 +18,3 @@ app.add_middleware(
 
 app.include_router(router_user)
 app.include_router(router_auth)
-
-# Настроить с нуля alembic

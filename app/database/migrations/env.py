@@ -3,10 +3,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from app.core.database import Base
+from app.database.database import Base
 """No delete!"""
-from app.models.user import UserOrm
-from app.models.token import BlackListToken
 
 import os
 from dotenv import load_dotenv

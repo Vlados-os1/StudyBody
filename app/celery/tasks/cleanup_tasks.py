@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import delete
-from app.core.database import async_session
+from app.database.database import async_session
 from app.models.token import BlackListToken
 
 from app.celery.celery_config import celery_app

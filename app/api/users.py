@@ -1,29 +1,17 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response, Cookie
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import APIRouter, Depends
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
-from fastapi.exceptions import RequestValidationError
-from pydantic import ValidationError
 
 import app.schemas.user as schemas_user
 from app.api.auth import oauth2_scheme
 from app.dependencies import get_db
-from app.core.database import async_session
 import app.models.user as models_user
-from app.exceptions.httpex import (
-    BadRequestException,
-    ForbiddenException,
+from app.exceptions.exceptions import (
     NotFoundException,
 )
 from app.core.jwt import (
-    create_token_pair,
     decode_access_token,
-    mail_token,
-    add_refresh_token_cookie,
     SUB,
-    JTI,
-    EXP,
 )
 
 

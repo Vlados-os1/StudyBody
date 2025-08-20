@@ -1,4 +1,4 @@
-from app.core.database import Base
+from app.database.database import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import TIMESTAMP
 from datetime import datetime
