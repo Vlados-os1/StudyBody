@@ -31,4 +31,3 @@ app/
 ├── dependencies.py         # зависимости для FastAPI (например, get_db)
 ├── exceptions.py           # обработка http ошибок (Forbidden, NotFound, etc)
 └── main.py                 # запуск FastAPI приложения
-tests/
