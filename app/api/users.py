@@ -6,13 +6,8 @@ import app.schemas.user as schemas_user
 from app.api.auth import oauth2_scheme
 from app.dependencies import get_db
 import app.models.user as models_user
-from app.exceptions.exceptions import (
-    NotFoundException,
-)
-from app.core.jwt import (
-    decode_access_token,
-    SUB,
-)
+from app.exceptions.exceptions import NotFoundException
+from app.core.jwt import decode_access_token, SUB
 
 
 router_user = APIRouter()
@@ -27,7 +22,12 @@ async def profile(
     if not user:
         raise NotFoundException(detail="User not found")
 
-    return {"email": user.email, "full_name": user.full_name, "department": user.department, "interests": user.interests}
+    return {
+        "email": user.email,
+        "full_name": user.full_name,
+        "department": user.department,
+        "interests": user.interests,
+    }
 
 @router_user.patch("/api/main/update")
 async def update_profile(

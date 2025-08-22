@@ -1,9 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, Response, Cookie
+from fastapi import APIRouter, Depends, Response, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from datetime import datetime, timezone
-from fastapi.exceptions import RequestValidationError
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.schemas.user as schemas_user
@@ -18,7 +16,12 @@ from app.exceptions.exceptions import (
     AuthTokenExpiredException,
     NotFoundException,
     ForbiddenException,
+    UserAlreadyExistsException,
+    UserNotActiveException,
+    PasswordMismatchException,
+    OldPasswordIncorrectException,
 )
+
 from app.core.jwt import (
     create_token_pair,
     refresh_token_state,
@@ -44,7 +47,10 @@ async def register(
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if user:
-        raise BadRequestException(detail="Email has already registered")
+        raise UserAlreadyExistsException()
+
+    if data.password != data.confirm_password:
+        raise PasswordMismatchException()
 
     user_data = data.model_dump(exclude={"confirm_password"})
     user_data["password"] = get_password_hash(user_data["password"])
@@ -54,7 +60,6 @@ async def register(
     user.is_active = False
     await user.save(db=db)
 
-    # send verify email
     user_schema = schemas_user.User.model_validate(user, from_attributes=True)
     verify_token = mail_token(user_schema)
 
@@ -69,7 +74,7 @@ async def register(
 @router_auth.post("/api/resend-verification", response_model=schemas_user.SuccessResponseScheme)
 async def resend_verification(
         data: schemas_user.ForgotPasswordSchema,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if not user:
@@ -79,7 +84,6 @@ async def resend_verification(
 
     user_schema = schemas_user.User.model_validate(user, from_attributes=True)
     verify_token = mail_token(user_schema)
-
     user_mail_event.delay(
         token=verify_token,
         recipients=[str(user_schema.email)]
@@ -101,12 +105,10 @@ async def login(
     if not user:
         raise AuthFailedException(detail="Incorrect email or password")
     if not user.is_active:
-        raise ForbiddenException(detail="Account not activated, check your email.")
+        raise UserNotActiveException()
 
-    user = schemas_user.User.model_validate(user, from_attributes=True)
-
-    token_pair = create_token_pair(user=user)
-
+    user_schema = schemas_user.User.model_validate(user, from_attributes=True)
+    token_pair = create_token_pair(user=user_schema)
     add_refresh_token_cookie(response=response, token=token_pair.refresh.token)
 
     return {"token": token_pair.access.token}
@@ -166,16 +168,18 @@ async def forgot_password(
         db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
-    if user:
-        user_schema = schemas_user.User.model_validate(user, from_attributes=True)
-        reset_token = mail_token(user_schema)
+    if not user:
+        return {"msg": "Reset token sent successfully, check your email"}
 
-        user_mail_event.delay(
-            token=reset_token,
-            recipients=[str(user_schema.email)]
-        )
+    user_schema = schemas_user.User.model_validate(user, from_attributes=True)
+    reset_token = mail_token(user_schema)
 
-    return {"msg": "Reset token sent successfully, check your email"}
+    user_mail_event.delay(
+        token=reset_token,
+        recipients=[str(user_schema.email)],
+    )
+
+    return {"msg": "Token to reset sent message, check your mail"}
 
 
 @router_auth.post("/password-reset", response_model=schemas_user.SuccessResponseScheme)
@@ -188,6 +192,9 @@ async def password_reset_token(
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
     if not user:
         raise NotFoundException(detail="User not found")
+
+    if data.password != data.confirm_password:
+        raise PasswordMismatchException()
 
     user.password = get_password_hash(data.password)
     await user.save(db=db)
@@ -205,7 +212,11 @@ async def password_update(
     if not user:
         raise NotFoundException(detail="User not found")
     if not verify_password(data.old_password, user.password):
-        raise BadRequestException(detail="Old password is incorrect")
+        raise OldPasswordIncorrectException()
+
+    if data.password != data.confirm_password:
+        raise PasswordMismatchException()
+
     user.password = get_password_hash(data.password)
     await user.save(db=db)
 
