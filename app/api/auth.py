@@ -14,8 +14,10 @@ from app.core.security import get_password_hash, verify_password
 from app.celery.tasks.mail_tasks import user_mail_event
 from app.exceptions.exceptions import (
     BadRequestException,
-    ForbiddenException,
+    AuthFailedException,
+    AuthTokenExpiredException,
     NotFoundException,
+    ForbiddenException,
 )
 from app.core.jwt import (
     create_token_pair,
@@ -32,19 +34,17 @@ from app.core.jwt import (
 # Клиент должен отправить имя пользователя и пароль POST-запросом по адресу `api/login`, чтобы получить токен доступа
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
-
 router_auth = APIRouter()
 
 
 @router_auth.post("/api/register", response_model=schemas_user.User)
 async def register(
-    data: schemas_user.UserRegister,
-    db: AsyncSession = Depends(get_db),
+        data: schemas_user.UserRegister,
+        db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if user:
-        raise HTTPException(status_code=400, detail="Email has already registered")
-
+        raise BadRequestException(detail="Email has already registered")
 
     user_data = data.model_dump(exclude={"confirm_password"})
     user_data["password"] = get_password_hash(user_data["password"])
@@ -90,19 +90,18 @@ async def resend_verification(
 
 @router_auth.post("/api/login")
 async def login(
-    data: schemas_user.UserLogin,
-    response: Response,
-    db: AsyncSession = Depends(get_db),
+        data: schemas_user.UserLogin,
+        response: Response,
+        db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.authenticate(
         db=db, email=data.email, password=data.password
     )
 
     if not user:
-        raise BadRequestException(detail="Incorrect email or password")
-
+        raise AuthFailedException(detail="Incorrect email or password")
     if not user.is_active:
-        raise ForbiddenException()
+        raise ForbiddenException(detail="Account not activated, check your email.")
 
     user = schemas_user.User.model_validate(user, from_attributes=True)
 
@@ -117,7 +116,7 @@ async def login(
 async def refresh(
         response: Response,
         refresh: Annotated[str | None, Cookie()] = None,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
 ):
     if not refresh:
         raise BadRequestException(detail="refresh token required")
@@ -132,7 +131,7 @@ async def refresh(
 @router_auth.get("/api/verify", response_model=schemas_user.SuccessResponseScheme)
 async def verify(
         token: str,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
@@ -146,8 +145,8 @@ async def verify(
 
 @router_auth.post("/api/logout", response_model=schemas_user.SuccessResponseScheme)
 async def logout(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: AsyncSession = Depends(get_db),
+        token: Annotated[str, Depends(oauth2_scheme)],
+        db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     jti = payload[JTI]
@@ -158,14 +157,13 @@ async def logout(
         expire=expire
     )
     await black_listed.save(db=db)
-
-    return {"msg": "Succesfully logout"}
+    return {"msg": "Successfully logout"}
 
 
 @router_auth.post("/api/forgot-password", response_model=schemas_user.SuccessResponseScheme)
 async def forgot_password(
-    data: schemas_user.ForgotPasswordSchema,
-    db: AsyncSession = Depends(get_db),
+        data: schemas_user.ForgotPasswordSchema,
+        db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if user:
@@ -182,9 +180,9 @@ async def forgot_password(
 
 @router_auth.post("/password-reset", response_model=schemas_user.SuccessResponseScheme)
 async def password_reset_token(
-    token: str,
-    data: schemas_user.PasswordResetSchema,
-    db: AsyncSession = Depends(get_db),
+        token: str,
+        data: schemas_user.PasswordResetSchema,
+        db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
@@ -193,27 +191,21 @@ async def password_reset_token(
 
     user.password = get_password_hash(data.password)
     await user.save(db=db)
-
-    return {"msg": "Password succesfully updated"}
+    return {"msg": "Password successfully updated"}
 
 
 @router_auth.post("/api/password-update", response_model=schemas_user.SuccessResponseScheme)
 async def password_update(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    data: schemas_user.PasswordUpdateSchema,
-    db: AsyncSession = Depends(get_db),
+        token: Annotated[str, Depends(oauth2_scheme)],
+        data: schemas_user.PasswordUpdateSchema,
+        db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
     if not user:
         raise NotFoundException(detail="User not found")
-
-    # raise Validation error
     if not verify_password(data.old_password, user.password):
-        try:
-            schemas_user.OldPasswordErrorSchema(old_password=False)
-        except ValidationError as e:
-            raise RequestValidationError(e.errors())
+        raise BadRequestException(detail="Old password is incorrect")
     user.password = get_password_hash(data.password)
     await user.save(db=db)
 
