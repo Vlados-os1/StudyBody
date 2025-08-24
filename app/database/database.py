@@ -1,11 +1,10 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs, AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import select
 from fastapi import HTTPException, status
 
 from app.core.configs.config import settings
-
 
 async_engine = create_async_engine(
     url=settings.DATA_URL_asyncpg,
@@ -25,7 +24,7 @@ class Base(AsyncAttrs, DeclarativeBase):
             cols.append(f"{col}={getattr(self, col)}")
         return f"<{self.__class__.__name__} {','.join(cols)}>"
 
-    async def save(self, db: async_session):
+    async def save(self, db: AsyncSession):
         """
         :param db:
         :return:
@@ -39,7 +38,7 @@ class Base(AsyncAttrs, DeclarativeBase):
             ) from ex
 
     @classmethod
-    async def find_by_id(cls, db: async_session, id: str):
+    async def find_by_id(cls, db: AsyncSession, id: str):
         query = select(cls).where(cls.id == id)
         result = await db.execute(query)
         return result.scalars().first()

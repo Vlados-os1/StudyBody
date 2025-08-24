@@ -12,7 +12,8 @@ from app.core.jwt import decode_access_token, SUB
 
 router_user = APIRouter()
 
-@router_user.get("/api/main")
+
+@router_user.get("/api/main", response_model=schemas_user.User)
 async def profile(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_db),
@@ -22,14 +23,10 @@ async def profile(
     if not user:
         raise NotFoundException(detail="User not found")
 
-    return {
-        "email": user.email,
-        "full_name": user.full_name,
-        "department": user.department,
-        "interests": user.interests,
-    }
+    return user
 
-@router_user.patch("/api/main/update")
+
+@router_user.patch("/api/main/update", response_model=schemas_user.SuccessResponseScheme)
 async def update_profile(
     token: Annotated[str, Depends(oauth2_scheme)],
     data: schemas_user.UserStudentFacts,
@@ -46,4 +43,4 @@ async def update_profile(
 
     await user.save(db=db)
 
-    return {"msg": "Successfully updated"}
+    return {"msg": "User successfully updated"}

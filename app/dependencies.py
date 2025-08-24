@@ -4,6 +4,8 @@ async def get_db():
     async with async_session() as db:
         try:
             yield db
-        except:
+        except Exception:
             await db.rollback()
             raise
+        finally:
+            await db.close()

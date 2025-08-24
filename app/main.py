@@ -1,9 +1,9 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.users import router_user
 from app.api.auth import router_auth
+from app.api.vacancies import router_vacancies
 
 
 app = FastAPI(title="StudyBody")
@@ -18,3 +18,4 @@ app.add_middleware(
 
 app.include_router(router_user)
 app.include_router(router_auth)
+app.include_router(router_vacancies)

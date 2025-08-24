@@ -10,6 +10,7 @@ import app.models.token as models_token
 from app.dependencies import get_db
 from app.core.security import get_password_hash, verify_password
 from app.celery.tasks.mail_tasks import user_mail_event
+
 from app.exceptions.exceptions import (
     BadRequestException,
     AuthFailedException,
@@ -33,7 +34,6 @@ from app.core.jwt import (
     EXP,
 )
 
-
 # Клиент должен отправить имя пользователя и пароль POST-запросом по адресу `api/login`, чтобы получить токен доступа
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
@@ -42,8 +42,8 @@ router_auth = APIRouter()
 
 @router_auth.post("/api/register", response_model=schemas_user.User)
 async def register(
-        data: schemas_user.UserRegister,
-        db: AsyncSession = Depends(get_db),
+    data: schemas_user.UserRegister,
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if user:
@@ -54,8 +54,6 @@ async def register(
 
     user_data = data.model_dump(exclude={"confirm_password"})
     user_data["password"] = get_password_hash(user_data["password"])
-
-
     user = models_user.UserOrm(**user_data)
     user.is_active = False
     await user.save(db=db)
@@ -70,20 +68,21 @@ async def register(
 
     return user_schema
 
-
 @router_auth.post("/api/resend-verification", response_model=schemas_user.SuccessResponseScheme)
 async def resend_verification(
-        data: schemas_user.ForgotPasswordSchema,
-        db: AsyncSession = Depends(get_db),
+    data: schemas_user.ForgotPasswordSchema,
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if not user:
         return {"msg": "If you have an account, check your email."}
+
     if user.is_active:
         return {"msg": "Account already activated."}
 
     user_schema = schemas_user.User.model_validate(user, from_attributes=True)
     verify_token = mail_token(user_schema)
+
     user_mail_event.delay(
         token=verify_token,
         recipients=[str(user_schema.email)]
@@ -91,12 +90,11 @@ async def resend_verification(
 
     return {"msg": "Verification email sent, check your inbox."}
 
-
 @router_auth.post("/api/login")
 async def login(
-        data: schemas_user.UserLogin,
-        response: Response,
-        db: AsyncSession = Depends(get_db),
+    data: schemas_user.UserLogin,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.authenticate(
         db=db, email=data.email, password=data.password
@@ -104,21 +102,22 @@ async def login(
 
     if not user:
         raise AuthFailedException(detail="Incorrect email or password")
+
     if not user.is_active:
         raise UserNotActiveException()
 
     user_schema = schemas_user.User.model_validate(user, from_attributes=True)
     token_pair = create_token_pair(user=user_schema)
+
     add_refresh_token_cookie(response=response, token=token_pair.refresh.token)
 
     return {"token": token_pair.access.token}
 
-
 @router_auth.post("/api/refresh")
 async def refresh(
-        response: Response,
-        refresh: Annotated[str | None, Cookie()] = None,
-        db: AsyncSession = Depends(get_db),
+    response: Response,
+    refresh: Annotated[str | None, Cookie()] = None,
+    db: AsyncSession = Depends(get_db),
 ):
     if not refresh:
         raise BadRequestException(detail="refresh token required")
@@ -129,11 +128,10 @@ async def refresh(
 
     return {"token": token_pair.access.token}
 
-
 @router_auth.get("/api/verify", response_model=schemas_user.SuccessResponseScheme)
 async def verify(
-        token: str,
-        db: AsyncSession = Depends(get_db),
+    token: str,
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
@@ -147,8 +145,8 @@ async def verify(
 
 @router_auth.post("/api/logout", response_model=schemas_user.SuccessResponseScheme)
 async def logout(
-        token: Annotated[str, Depends(oauth2_scheme)],
-        db: AsyncSession = Depends(get_db),
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     jti = payload[JTI]
@@ -161,11 +159,10 @@ async def logout(
     await black_listed.save(db=db)
     return {"msg": "Successfully logout"}
 
-
 @router_auth.post("/api/forgot-password", response_model=schemas_user.SuccessResponseScheme)
 async def forgot_password(
-        data: schemas_user.ForgotPasswordSchema,
-        db: AsyncSession = Depends(get_db),
+    data: schemas_user.ForgotPasswordSchema,
+    db: AsyncSession = Depends(get_db),
 ):
     user = await models_user.UserOrm.find_by_email(db=db, email=data.email)
     if not user:
@@ -181,12 +178,11 @@ async def forgot_password(
 
     return {"msg": "Token to reset sent message, check your mail"}
 
-
-@router_auth.post("/password-reset", response_model=schemas_user.SuccessResponseScheme)
+@router_auth.post("/api/password-reset", response_model=schemas_user.SuccessResponseScheme)
 async def password_reset_token(
-        token: str,
-        data: schemas_user.PasswordResetSchema,
-        db: AsyncSession = Depends(get_db),
+    token: str,
+    data: schemas_user.PasswordResetSchema,
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])
@@ -198,14 +194,14 @@ async def password_reset_token(
 
     user.password = get_password_hash(data.password)
     await user.save(db=db)
-    return {"msg": "Password successfully updated"}
 
+    return {"msg": "Password successfully updated"}
 
 @router_auth.post("/api/password-update", response_model=schemas_user.SuccessResponseScheme)
 async def password_update(
-        token: Annotated[str, Depends(oauth2_scheme)],
-        data: schemas_user.PasswordUpdateSchema,
-        db: AsyncSession = Depends(get_db),
+    token: Annotated[str, Depends(oauth2_scheme)],
+    data: schemas_user.PasswordUpdateSchema,
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await decode_access_token(token=token, db=db)
     user = await models_user.UserOrm.find_by_id(db=db, id=payload[SUB])

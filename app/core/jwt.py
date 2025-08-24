@@ -11,7 +11,6 @@ from app.models.token import BlackListToken
 from app.models.user import UserOrm
 from app.exceptions.exceptions import AuthFailedException
 
-
 REFRESH_COOKIE_NAME = "refresh"
 SUB = "sub"
 EXP = "exp"
@@ -21,7 +20,7 @@ JTI = "jti"
 SECRET_KEY = settings.JWT_KEY
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRES_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-REFRESH_TOKEN_EXPIRES_MINUTES =settings.REFRESH_TOKEN_EXPIRES_MINUTES
+REFRESH_TOKEN_EXPIRES_MINUTES = settings.REFRESH_TOKEN_EXPIRES_MINUTES
 
 
 def _get_utc_now():
@@ -69,6 +68,17 @@ def create_token_pair(user: User) -> TokenPair:
 async def decode_access_token(token: str, db: AsyncSession):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        exp = payload.get(EXP)
+        if exp:
+            if isinstance(exp, datetime):
+                exp_timestamp = exp.timestamp()
+            else:
+                exp_timestamp = exp
+
+            if datetime.fromtimestamp(exp_timestamp, timezone.utc) < datetime.now(timezone.utc):
+                raise JWTError("Token expired")
+
         jti = payload[JTI]
         black_list_token = await BlackListToken.find_by_id(db=db, id=jti)
         if black_list_token and black_list_token.expire > datetime.now(timezone.utc):
@@ -82,7 +92,6 @@ async def decode_access_token(token: str, db: AsyncSession):
 async def refresh_token_state(
         token: str,
         db: AsyncSession,
-
 ):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -125,7 +134,6 @@ def add_refresh_token_cookie(response: Response, token: str):
         value=token,
         expires=int(exp.timestamp()),
         httponly=True,
+        # secure=True,
+        # samesite='strict'
     )
-
-# secure=True,
-# samesite='strict'
