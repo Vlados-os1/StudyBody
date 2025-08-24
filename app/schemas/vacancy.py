@@ -30,8 +30,8 @@ class VacancyUpdate(BaseModel):
 
 class VacancyResponse(VacancyBase):
     id: UUID4
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
     user: UserBase
 
     @field_validator("id", mode="before")
