@@ -25,8 +25,12 @@ async def get_all_vacancies(
         raise NotFoundException(detail="User not found")
 
     vacancies = await models_vacancy.VacancyOrm.get_all(db=db)
+    vacancies_schema = [
+        schemas_vacancy.VacancyResponse.model_validate(vacancy, from_attributes=True)
+        for vacancy in vacancies
+    ]
 
-    return vacancies
+    return vacancies_schema
 
 
 @router_vacancies.get("/api/main/vacancies", response_model=List[schemas_vacancy.VacancyResponse])
