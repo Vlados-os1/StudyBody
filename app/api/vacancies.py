@@ -82,7 +82,11 @@ async def create_vacancy(
     vacancy = models_vacancy.VacancyOrm(**vacancy_data)
     await vacancy.save(db=db)
 
-    vacancy_schema = schemas_vacancy.VacancyResponse.model_validate(vacancy, from_attributes=True)
+    await db.refresh(vacancy)
+
+    vacancy_with_user = await models_vacancy.VacancyOrm.get_by_id_with_user(db=db, vacancy_id=vacancy.id)
+    vacancy_schema = schemas_vacancy.VacancyResponse.model_validate(vacancy_with_user, from_attributes=True)
+
     return vacancy_schema
 
 

@@ -40,7 +40,14 @@ class VacancyOrm(Base):
 
     @classmethod
     async def get_by_user_id(cls, db: AsyncSession, user_id: str):
-        query = select(cls).where(cls.user_id == user_id)
+        query = select(cls).options(selectinload(cls.user)).where(cls.user_id == user_id)
         result = await db.execute(query)
         return result.scalars().all()
+
+    @classmethod
+    async def get_by_id_with_user(cls, db: AsyncSession, vacancy_id: uuid.UUID):
+        query = select(cls).options(selectinload(cls.user)).where(cls.id == vacancy_id)
+        result = await db.execute(query)
+        return result.scalars().first()
+
 

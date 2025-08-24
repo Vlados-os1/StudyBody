@@ -9,16 +9,6 @@ class VacancyBase(BaseModel):
     title: str
     description: str | None = None
     tags: str | None = None
-    created_at: datetime
-    updated_at: datetime
-
-class Vacancy(VacancyBase):
-    id: UUID4
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def convert_to_str(cls, v):
-        return str(v) if v else v
 
 class VacancyCreate(BaseModel):
     title: str
@@ -38,20 +28,16 @@ class VacancyUpdate(BaseModel):
         "from_attributes": True
     }
 
-class UserVacancyResponse(VacancyBase):
+class VacancyResponse(VacancyBase):
     id: UUID4
-
-    model_config = {
-        "from_attributes": True
-    }
+    created_at: datetime
+    updated_at: datetime
+    user: UserBase
 
     @field_validator("id", mode="before")
     @classmethod
     def convert_to_str(cls, v):
         return str(v) if v else v
-
-class VacancyResponse(UserVacancyResponse):
-    user: UserBase
 
     model_config = {
         "from_attributes": True
